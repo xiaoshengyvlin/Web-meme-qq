@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ 表情包生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#8B5CF6',
+                        secondary: '#EC4899',
+                        accent: '#06B6D4',
+                        soft: {
+                            purple: '#EDE9FE',
+                            pink: '#FCE7F3',
+                            blue: '#ECFEFF',
+                            green: '#F0FDF4',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.4s ease-out',
+                        'bounce-soft': 'bounceSoft 2s infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)' },
+                            '100%': { boxShadow: '0 0 40px rgba(139, 92, 246, 0.6)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        bounceSoft: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .bg-gradient-soft {
+                background: linear-gradient(135deg, #EDE9FE 0%, #FCE7F3 50%, #ECFEFF 100%);
+            }
+            .bg-gradient-card {
+                background: linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+            }
+            .glass {
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+            }
+            .text-gradient {
+                background: linear-gradient(135deg, #8B5CF6, #EC4899, #06B6D4);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+            .shadow-soft {
+                box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15), 0 4px 16px rgba(0, 0, 0, 0.05);
+            }
+            .hover-lift {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .hover-lift:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 20px 40px rgba(139, 92, 246, 0.2);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            /* 自定义滚动条 */
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: rgba(0, 0, 0, 0.05);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: rgba(139, 92, 246, 0.4);
+                border-radius: 3px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: rgba(139, 92, 246, 0.6);
+            }
+        /* 步骤指示器样式 */
+        .step-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .step-indicator.complete .step-number {
+            background: linear-gradient(135deg, #8B5CF6, #EC4899);
+            color: white;
+        }
+        .step-indicator:not(.complete) .step-number {
+            background: #f3f4f6;
+            color: #9ca3af;
+        }
+        .step-number {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            transition: all 0.3s ease;
+        }
+        .step-indicator.complete .step-label {
+            color: #8B5CF6;
+        }
+        /* 关键词标签 */
+        .keyword-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 0.5rem;
+            color: #8B5CF6;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .keyword-tag.chinese {
+            font-size: 0.875rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            color: #7c3aed;
+            padding: 0.375rem 0.875rem;
+        }
+        .keyword-tag.english {
+            font-size: 0.625rem;
+            opacity: 0.6;
+            color: #a78bfa;
+        }
+        .keyword-tag:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+    }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-soft">
+    <!-- 装饰性背景元素 -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-soft-purple rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-float"></div>
+        <div class="absolute top-1/3 -left-20 w-72 h-72 bg-soft-pink rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-float" style="animation-delay: 2s;"></div>
+        <div class="absolute -bottom-40 right-1/4 w-96 h-96 bg-soft-blue rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-float" style="animation-delay: 4s;"></div>
+    </div>
+
+    <div class="relative z-10">
+        <!-- 头部 -->
+        <header class="glass sticky top-0 z-50 border-b border-white/30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-soft animate-glow">
+                            <i class="fa fa-smile-o text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gradient">表情包生成器</h1>
+                            <p class="text-xs text-gray-500">轻松制作有趣的表情包</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span id="templateCount" class="px-3 py-1 rounded-full bg-soft-purple text-primary text-sm font-medium">
+                            <i class="fa fa-th-large mr-1"></i>加载中...
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- 左侧模板选择（sticky定位） -->
+                <div class="lg:col-span-4">
+                    <div class="sticky top-24 glass rounded-2xl shadow-soft p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">
+                                <i class="fa fa-picture-o text-primary mr-2"></i>选择模板
+                            </h2>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="searchInput" 
+                                    placeholder="搜索模板..."
+                                    class="pl-9 pr-4 py-2 rounded-xl bg-white/60 border border-white/50 focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm w-48 transition-all"
+                                >
+                                <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div id="templateList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                            <div class="flex items-center justify-center py-12">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧编辑区域 -->
+                <div class="lg:col-span-8">
+                    <div class="glass rounded-2xl shadow-soft p-6">
+                        <!-- 模板信息 -->
+                        <div id="templateInfo" class="hidden mb-6 animate-fade-in">
+                            <div class="flex items-center space-x-4 p-4 bg-gradient-to-r from-soft-purple to-soft-pink rounded-xl border-2 border-primary/20 shadow-sm">
+                                <div id="templatePreview" class="w-16 h-16 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden">
+                                    <i class="fa fa-image text-primary text-2xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 id="templateName" class="font-semibold text-gray-800 text-lg"></h3>
+                                    <div id="templateKeywords" class="flex flex-wrap gap-1 mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 无模板提示 -->
+                        <div id="noTemplate" class="text-center py-12">
+                            <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-soft-purple flex items-center justify-center animate-bounce-soft">
+                                <i class="fa fa-hand-o-left text-primary text-4xl"></i>
+                            </div>
+                            <p class="text-gray-500 text-lg">👈 在左侧选择一个模板开始制作</p>
+                        </div>
+
+                        <!-- 参数配置区域 -->
+                        <div id="configArea" class="hidden">
+                            <!-- 步骤指示器 -->
+                            <div class="mb-8 flex justify-between items-center">
+                                <div class="step-indicator complete">
+                                    <div class="step-number">1</div>
+                                    <div class="step-label">QQ号</div>
+                                </div>
+                                <div class="flex-1 mx-2 h-1 bg-gradient-to-r from-soft-purple to-soft-pink rounded"></div>
+                                <div class="step-indicator" id="stepImage">
+                                    <div class="step-number">2</div>
+                                    <div class="step-label">图片</div>
+                                </div>
+                                <div class="flex-1 mx-2 h-1 bg-gray-200 rounded"></div>
+                                <div class="step-indicator" id="stepText">
+                                    <div class="step-number">3</div>
+                                    <div class="step-label">文字</div>
+                                </div>
+                            </div>
+
+                            <!-- QQ 号输入区域 -->
+                            <div id="qqSection" class="mb-6 p-4 rounded-xl bg-gradient-to-br from-blue-50/80 to-cyan-50/80 border-2 border-cyan-200/50">
+                                <h4 class="font-medium text-gray-700 mb-3">
+                                    <i class="fa fa-user text-accent mr-2"></i>第 1 步：QQ 号输入
+                                </h4>
+                                <div id="qqInputArea" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                </div>
+                            </div>
+
+                            <!-- 图片上传区域 -->
+                            <div id="imageSection" class="mb-6 p-4 rounded-xl bg-gradient-to-br from-pink-50/80 to-rose-50/80 border-2 border-pink-200/50">
+                                <h4 class="font-medium text-gray-700 mb-3">
+                                    <i class="fa fa-camera text-secondary mr-2"></i>第 2 步：上传图片
+                                    <span id="imageCount" class="text-sm text-gray-400 ml-2"></span>
+                                </h4>
+                                <div id="imageUploadArea" class="grid grid-cols-1 gap-3">
+                                </div>
+                            </div>
+
+                            <!-- 文字输入区域 -->
+                            <div id="textSection" class="mb-6 p-4 rounded-xl bg-gradient-to-br from-purple-50/80 to-violet-50/80 border-2 border-purple-200/50">
+                                <h4 class="font-medium text-gray-700 mb-3">
+                                    <i class="fa fa-font text-primary mr-2"></i>第 3 步：输入文字
+                                    <span id="textCount" class="text-sm text-gray-400 ml-2"></span>
+                                </h4>
+                                <div id="textInputArea" class="space-y-3">
+                                </div>
+                            </div>
+
+                            <!-- 生成按钮 -->
+                            <div class="flex justify-center">
+                                <button 
+                                    id="generateBtn"
+                                    class="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-xl shadow-soft hover-lift flex items-center space-x-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                >
+                                    <i class="fa fa-magic"></i>
+                                    <span>生成表情包</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 结果浮层模态框 -->
+        <div id="resultModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 animate-fade-in">
+            <div class="glass rounded-2xl shadow-soft max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slide-up relative">
+                <!-- 关闭按钮 -->
+                <button 
+                    id="closeResultBtn"
+                    class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110"
+                    title="关闭"
+                >
+                    <i class="fa fa-times text-lg"></i>
+                </button>
+
+                <div class="p-8">
+                    <h4 class="font-semibold text-gray-800 mb-6 text-center text-lg">
+                        <i class="fa fa-star text-yellow-500 mr-2"></i>生成成功！
+                    </h4>
+                    <div class="flex justify-center mb-6">
+                        <div class="relative group">
+                            <img id="resultImage" class="max-w-full max-h-96 rounded-xl shadow-soft" alt="生成的表情包">
+                            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center space-x-3">
+                                <button 
+                                    id="downloadBtn"
+                                    class="px-4 py-2 bg-white text-gray-800 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                                >
+                                    <i class="fa fa-download mr-1"></i>下载
+                                </button>
+                                <button 
+                                    id="copyBtn"
+                                    class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                                >
+                                    <i class="fa fa-copy mr-1"></i>复制
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 justify-center">
+                        <button 
+                            id="downloadBtnFooter"
+                            class="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-lg font-medium hover-lift transition-all flex items-center space-x-2"
+                        >
+                            <i class="fa fa-download"></i>
+                            <span>下载</span>
+                        </button>
+                        <button 
+                            id="copyBtnFooter"
+                            class="px-6 py-2 bg-white border-2 border-primary text-primary rounded-lg font-medium hover-lift transition-all flex items-center space-x-2"
+                        >
+                            <i class="fa fa-copy"></i>
+                            <span>复制</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="glass mt-12 border-t border-white/30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div class="text-center text-gray-500 text-sm">
+                    <p>✨ 表情包生成器 v2.1 · Made by Zako 💜</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 hidden">
+        <div class="glass px-6 py-3 rounded-xl shadow-soft flex items-center space-x-2 animate-slide-up">
+            <i id="toastIcon" class="fa fa-check-circle text-green-500"></i>
+            <span id="toastMessage" class="text-gray-700"></span>
+        </div>
+    </div>
+
+    <!-- Loading 遮罩 -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="glass p-8 rounded-2xl shadow-soft text-center">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            <p class="text-gray-700 font-medium">正在生成表情包...</p>
+            <p class="text-gray-500 text-sm mt-1">请稍候 ✨</p>
+        </div>
+    </div>
+
+    <script>
+        // 全局状态
+        let templates = [];
+        let selectedTemplate = null;
+        let uploadedImages = [];
+        let qqInputs = {
+            executor: '',
+            target: ''
+        };
+
+        // DOM 元素
+        const elements = {
+            templateList: document.getElementById('templateList'),
+            templateCount: document.getElementById('templateCount'),
+            searchInput: document.getElementById('searchInput'),
+            noTemplate: document.getElementById('noTemplate'),
+            templateInfo: document.getElementById('templateInfo'),
+            templateName: document.getElementById('templateName'),
+            templateKeywords: document.getElementById('templateKeywords'),
+            configArea: document.getElementById('configArea'),
+            imageSection: document.getElementById('imageSection'),
+            imageUploadArea: document.getElementById('imageUploadArea'),
+            imageCount: document.getElementById('imageCount'),
+            textSection: document.getElementById('textSection'),
+            textInputArea: document.getElementById('textInputArea'),
+            textCount: document.getElementById('textCount'),
+            generateBtn: document.getElementById('generateBtn'),
+            resultModal: document.getElementById('resultModal'),
+            closeResultBtn: document.getElementById('closeResultBtn'),
+            resultImage: document.getElementById('resultImage'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            copyBtn: document.getElementById('copyBtn'),
+            downloadBtnFooter: document.getElementById('downloadBtnFooter'),
+            copyBtnFooter: document.getElementById('copyBtnFooter'),
+            loadingOverlay: document.getElementById('loadingOverlay'),
+            toast: document.getElementById('toast'),
+            toastIcon: document.getElementById('toastIcon'),
+            toastMessage: document.getElementById('toastMessage'),
+            stepImage: document.getElementById('stepImage'),
+            stepText: document.getElementById('stepText'),
+        };
+
+        // 显示 Toast
+        function showToast(message, type = 'success') {
+            elements.toastMessage.textContent = message;
+            elements.toastIcon.className = type === 'success' 
+                ? 'fa fa-check-circle text-green-500' 
+                : 'fa fa-exclamation-circle text-red-500';
+            elements.toast.classList.remove('hidden');
+            setTimeout(() => {
+                elements.toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // 加载模板列表
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/templates');
+                const data = await response.json();
+                templates = data.data.templates;
+                elements.templateCount.innerHTML = `<i class="fa fa-th-large mr-1"></i>${templates.length} 个模板`;
+                renderTemplates(templates);
+            } catch (error) {
+                console.error('加载模板失败:', error);
+                showToast('加载模板失败', 'error');
+            }
+        }
+
+        // 更新步骤指示器
+        function updateStepIndicators() {
+            if (!selectedTemplate) return;
+            
+            // 步骤1：QQ号 (始终complete)
+            // 步骤2：图片
+            const imageComplete = uploadedImages.length >= selectedTemplate.min_images;
+            if (imageComplete) {
+                elements.stepImage.classList.add('complete');
+            } else {
+                elements.stepImage.classList.remove('complete');
+            }
+            
+            // 步骤3：文字
+            if (imageComplete) {
+                elements.stepText.classList.add('complete');
+            } else {
+                elements.stepText.classList.remove('complete');
+            }
+            
+            // 更新生成按钮禁用状态
+            const allFieldsFilled = 
+                uploadedImages.length >= selectedTemplate.min_images &&
+                Array.from(elements.textInputArea.querySelectorAll('input'))
+                    .slice(0, selectedTemplate.min_texts)
+                    .every(input => input.value.trim() !== '');
+            
+            elements.generateBtn.disabled = !allFieldsFilled;
+        }
+
+        // 渲染模板列表
+        function renderTemplates(templateList) {
+            if (templateList.length === 0) {
+                elements.templateList.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fa fa-search text-3xl mb-2 block"></i>
+                        未找到匹配的模板
+                    </div>
+                `;
+                return;
+            }
+
+            elements.templateList.innerHTML = templateList.map(template => {
+                // 优先显示中文关键词，否则显示英文关键词
+                const keywords = template.keywords || [];
+                const chineseKeyword = keywords.find(k => /[\u4e00-\u9fff]/.test(k));
+                const englishKeyword = keywords.find(k => !/[\u4e00-\u9fff]/.test(k));
+                const keywordBadge = template.key;
+                
+                // 标题显示：中文 + 英文
+                const displayTitle = chineseKeyword || template.key;
+                
+                const imageInfo = template.min_images > 0 ? `🖼️ ${template.min_images}图` : '📝 纯文字';
+                const textInfo = template.min_texts > 0 ? `${template.min_texts}段文字` : '无需文字';
+                
+                return `
+                    <div 
+                        class="template-item p-4 rounded-xl bg-white/50 border-2 border-white/50 cursor-pointer hover-lift transition-all ${selectedTemplate?.key === template.key ? 'ring-2 ring-primary bg-soft-purple/50 border-primary/50' : ''}"
+                        data-key="${template.key}"
+                    >
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center flex-shrink-0">
+                                <i class="fa fa-smile-o text-primary text-lg"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-gray-800 truncate">${displayTitle}</div>
+                                <div class="text-xs text-gray-600 flex items-center space-x-1 mt-1">
+                                    <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded">${keywordBadge}</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    ${imageInfo} · ${textInfo}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 绑定点击事件
+            document.querySelectorAll('.template-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const key = item.dataset.key;
+                    const template = templates.find(t => t.key === key);
+                    if (template) selectTemplate(template);
+                });
+            });
+        }
+
+        // 选择模板
+        function selectTemplate(template) {
+            selectedTemplate = template;
+            uploadedImages = [];
+            qqInputs = { executor: '', target: '' };
+            
+            // 更新列表选中状态
+            renderTemplates(filterTemplates(elements.searchInput.value));
+            
+            // 显示模板信息
+            elements.noTemplate.classList.add('hidden');
+            elements.templateInfo.classList.remove('hidden');
+            elements.configArea.classList.remove('hidden');
+            elements.resultModal.classList.add('hidden');
+            
+            elements.templateName.textContent = template.key;
+            
+            // 显示关键词标签
+            const keywords = template.keywords || [];
+            const chineseKeywords = keywords.filter(k => /[\u4e00-\u9fff]/.test(k));
+            const englishKeywords = keywords.filter(k => !/[\u4e00-\u9fff]/.test(k));
+            
+            const allKeywords = [...chineseKeywords, ...englishKeywords];
+            elements.templateKeywords.innerHTML = allKeywords
+                .map((kw, idx) => {
+                    const isChinese = /[\u4e00-\u9fff]/.test(kw);
+                    return `<span class="keyword-tag ${isChinese ? 'chinese' : 'english'}">${isChinese ? '' : '#'}${kw}</span>`;
+                })
+                .join('');
+            
+            // 渲染 QQ 号输入区域
+            renderQQInputArea();
+            
+            // 渲染图片上传区域
+            renderImageUploadArea();
+            
+            // 渲染文字输入区域
+            renderTextInputArea();
+            
+            // 更新步骤指示器
+            updateStepIndicators();
+        }
+
+        // QQ头像防抖和缓存
+        const avatarCache = {};
+        const debounceTimers = {};
+
+        // 预览头像
+        async function previewQQAvatar(inputElement, previewId) {
+            const qq = inputElement.value.trim();
+            const preview = document.getElementById(previewId);
+            
+            if (!qq || !/^\d+$/.test(qq)) {
+                preview.innerHTML = '';
+                return;
+            }
+            
+            // 清除之前的防抖定时器
+            if (debounceTimers[previewId]) {
+                clearTimeout(debounceTimers[previewId]);
+            }
+            
+            // 防抖：等待500ms无新输入后再请求
+            debounceTimers[previewId] = setTimeout(() => {
+                // 检查缓存
+                if (avatarCache[qq]) {
+                    preview.innerHTML = `<img src="${avatarCache[qq]}" class="w-16 h-16 rounded-lg object-cover border border-white/50 shadow-sm" onerror="this.parentElement.innerHTML='<div class=&quot;text-center text-xs text-red-400&quot;>加载失败</div>'">`;
+                    return;
+                }
+                
+                preview.innerHTML = '<div class="text-center text-gray-400">加载中...</div>';
+                
+                // 添加时间戳禁用浏览器缓存
+                const timestamp = new Date().getTime();
+                const avatarUrl = `/api/qq-avatar/${qq}?t=${timestamp}`;
+                const testImg = new Image();
+                
+                testImg.onload = function() {
+                    // 缓存该头像URL
+                    avatarCache[qq] = avatarUrl;
+                    preview.innerHTML = `<img src="${avatarUrl}" class="w-16 h-16 rounded-lg object-cover border border-white/50 shadow-sm" onerror="this.parentElement.innerHTML='<div class=&quot;text-center text-xs text-red-400&quot;>加载失败</div>'">`;
+                };
+                
+                testImg.onerror = function() {
+                    preview.innerHTML = '<div class="text-center text-xs text-red-400">无法加载头像</div>';
+                };
+                
+                testImg.src = avatarUrl;
+            }, 500);
+        }
+
+        // 渲染 QQ 号输入区域
+        function renderQQInputArea() {
+            const { min_images, max_images } = selectedTemplate;
+            const qqInputArea = document.getElementById('qqInputArea');
+            const qqSection = document.getElementById('qqSection');
+            
+            // 根据模板图片需求判断是否显示QQ号区域
+            if (max_images === 0) {
+                // 纯文字模板，隐藏QQ号区域
+                qqSection?.classList.add('hidden');
+                return;
+            }
+            
+            qqSection?.classList.remove('hidden');
+            
+            // 检查是否有已上传的图片
+            const hasUploadedImages = uploadedImages.length > 0;
+            const disabled = hasUploadedImages ? 'disabled' : '';
+            const disabledClass = hasUploadedImages ? 'opacity-50 cursor-not-allowed bg-gray-100' : '';
+            
+            // 根据图片数量决定显示什么
+            let html = '';
+            
+            if (max_images >= 2) {
+                // 需要两个输入框：执行者和受害者
+                html = `
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-2">👤 执行者 QQ 号</label>
+                        <input 
+                            type="text" 
+                            inputmode="numeric"
+                            placeholder="执行者 QQ 号"
+                            value="${qqInputs.executor}"
+                            oninput="qqInputs.executor = this.value; previewQQAvatar(this, 'executorAvatarPreview');"
+                            onchange="qqInputs.executor = this.value"
+                            ${disabled}
+                            class="w-full px-4 py-3 rounded-xl bg-white/60 border border-white/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all ${disabledClass}"
+                        >
+                        <div id="executorAvatarPreview" class="mt-2 flex justify-center"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-2">🎯 受害者 QQ 号</label>
+                        <input 
+                            type="text" 
+                            inputmode="numeric"
+                            placeholder="受害者 QQ 号"
+                            value="${qqInputs.target}"
+                            oninput="qqInputs.target = this.value; previewQQAvatar(this, 'targetAvatarPreview');"
+                            onchange="qqInputs.target = this.value"
+                            ${disabled}
+                            class="w-full px-4 py-3 rounded-xl bg-white/60 border border-white/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all ${disabledClass}"
+                        >
+                        <div id="targetAvatarPreview" class="mt-2 flex justify-center"></div>
+                    </div>
+                `;
+            } else if (max_images === 1) {
+                // 只需要一个输入框：受害者
+                html = `
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm text-gray-600 mb-2">🎯 受害者 QQ 号</label>
+                        <input 
+                            type="text" 
+                            inputmode="numeric"
+                            placeholder="受害者 QQ 号"
+                            value="${qqInputs.target}"
+                            oninput="qqInputs.target = this.value; previewQQAvatar(this, 'targetAvatarPreview');"
+                            onchange="qqInputs.target = this.value"
+                            ${disabled}
+                            class="w-full px-4 py-3 rounded-xl bg-white/60 border border-white/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all ${disabledClass}"
+                        >
+                        <div id="targetAvatarPreview" class="mt-2 flex justify-center"></div>
+                    </div>
+                `;
+            }
+            
+            qqInputArea.innerHTML = html;
+            updateStepIndicators();
+        }
+
+        // 渲染图片上传区域
+        function renderImageUploadArea() {
+            const { min_images, max_images } = selectedTemplate;
+            elements.imageCount.textContent = `(需要 ${min_images === max_images ? min_images : `${min_images}~${max_images}`} 张)`;
+            
+            if (max_images === 0) {
+                elements.imageSection.classList.add('hidden');
+                return;
+            }
+            
+            elements.imageSection.classList.remove('hidden');
+            let html = '';
+            
+            // 生成每张图片的容器
+            for (let i = 0; i < max_images; i++) {
+                const imageLabel = max_images >= 2 
+                    ? (i === 0 ? '执行者' : '受害者')
+                    : '受害者';
+                
+                if (i < uploadedImages.length) {
+                    const img = uploadedImages[i];
+                    const imgSrc = typeof img === 'object' ? img.src : img;
+                    html += `
+                        <div class="relative p-4 rounded-xl border-2 border-dashed border-gray-300 bg-gradient-card">
+                            <label class="block">
+                                <span class="text-sm font-medium text-gray-700 mb-2 block">${imageLabel}</span>
+                                <img src="${imgSrc}" class="w-full max-h-40 rounded-lg object-cover mb-2">
+                                <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    class="hidden"
+                                    onchange="replaceImage(this, ${i})"
+                                >
+                                <button type="button" class="w-full px-3 py-2 text-sm bg-white/60 hover:bg-white rounded-lg border border-white/50 transition-colors" onclick="document.querySelector('input[accept=image]').click()">
+                                    点击更换
+                                </button>
+                            </label>
+                            <button 
+                                type="button"
+                                onclick="removeImage(${i})"
+                                class="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs"
+                            >
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // 空的上传框
+                    html += `
+                        <div class="p-4 rounded-xl border-2 border-dashed border-gray-300 hover:border-primary hover:bg-soft-purple/30 transition-all">
+                            <label class="block">
+                                <span class="text-sm font-medium text-gray-700 mb-2 block">${imageLabel}</span>
+                                <div class="text-center py-6 cursor-pointer">
+                                    <i class="fa fa-cloud-upload text-gray-400 text-2xl mb-2 block"></i>
+                                    <span class="text-xs text-gray-500">点击、拖拽或粘贴上传</span>
+                                </div>
+                                <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    class="hidden"
+                                    onchange="handleImageUpload(this, ${i})"
+                                >
+                            </label>
+                        </div>
+                    `;
+                }
+            }
+            
+            elements.imageUploadArea.innerHTML = html;
+            
+            // 为所有上传框添加拖拽和粘贴功能
+            setupImageUploadEvents();
+            
+            // 延迟更新 QQ 号输入框禁用状态，避免无限循环
+            setTimeout(() => {
+                renderQQInputArea();
+                updateStepIndicators();
+            }, 0);
+        }
+
+        // 设置图片上传事件（拖拽、粘贴）
+        function setupImageUploadEvents() {
+            const uploadArea = document.getElementById('imageUploadArea');
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.add('bg-soft-purple/30');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('bg-soft-purple/30');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('bg-soft-purple/30');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    // 找到第一个空位
+                    for (let i = 0; i < selectedTemplate.max_images; i++) {
+                        if (i >= uploadedImages.length) {
+                            handleImageUpload({ files: [files[0]] }, i);
+                            break;
+                        }
+                    }
+                }
+            });
+            
+            // 全局粘贴板功能 - 在 document 级别监听
+            document.removeEventListener('paste', handlePaste);
+            document.addEventListener('paste', handlePaste);
+        }
+
+        // 全局粘贴处理函数
+        function handlePaste(e) {
+            // 只在有模板选中时处理
+            if (!selectedTemplate) return;
+            
+            const items = e.clipboardData?.items;
+            if (items) {
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        // 找到第一个空位
+                        for (let j = 0; j < selectedTemplate.max_images; j++) {
+                            if (j >= uploadedImages.length) {
+                                handleImageUpload({ files: [file] }, j);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 处理图片上传
+        function handleImageUpload(input, index) {
+            const file = input.files?.[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImages[index] = e.target.result;
+                renderImageUploadArea();
+                showToast('图片上传成功');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 替换图片
+        function replaceImage(input, index) {
+            handleImageUpload(input, index);
+        }
+
+        // 移除图片
+        function removeImage(index) {
+            uploadedImages.splice(index, 1);
+            renderImageUploadArea();
+        }
+
+        // 渲染文字输入区域
+        function renderTextInputArea() {
+            const { min_texts, max_texts, default_texts } = selectedTemplate;
+            elements.textCount.textContent = `(需要 ${min_texts === max_texts ? min_texts : `${min_texts}~${max_texts}`} 段)`;
+            
+            if (max_texts === 0) {
+                elements.textSection.classList.add('hidden');
+                return;
+            }
+            
+            elements.textSection.classList.remove('hidden');
+            let html = '';
+            
+            for (let i = 0; i < max_texts; i++) {
+                const placeholder = default_texts[i] || `第 ${i + 1} 段文字`;
+                const required = i < min_texts;
+                html += `
+                    <input 
+                        type="text" 
+                        class="w-full px-4 py-3 rounded-xl bg-white/60 border border-white/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                        placeholder="${placeholder}${required ? ' *' : ''}"
+                        data-index="${i}"
+                    >
+                `;
+            }
+            
+            elements.textInputArea.innerHTML = html;
+            
+            // 添加输入事件监听器，实时更新步骤指示器
+            elements.textInputArea.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', updateStepIndicators);
+            });
+        }
+
+        // 更新步骤指示器
+        function updateStepIndicators() {
+            if (!selectedTemplate) return;
+            
+            const stepQQ = document.querySelector('.step-indicator:nth-child(1)');
+            const stepImage = document.getElementById('stepImage');
+            const stepText = document.getElementById('stepText');
+            const qqSection = document.getElementById('qqSection');
+            
+            // 如果没有图片需求，隐藏整个步骤指示器，直接显示图片和文字步骤
+            if (selectedTemplate.max_images === 0) {
+                // 隐藏QQ号步骤
+                if (stepQQ) stepQQ.style.display = 'none';
+                if (stepImage) {
+                    stepImage.querySelector('.step-number').textContent = '1';
+                    stepImage.querySelector('.step-label').textContent = '文字';
+                    stepImage.classList.add('complete');
+                }
+                if (stepText) {
+                    stepText.querySelector('.step-number').textContent = '2';
+                    stepText.querySelector('.step-label').textContent = '完成';
+                    const textInputs = elements.textInputArea.querySelectorAll('input');
+                    const textComplete = Array.from(textInputs).filter((input, idx) => idx < selectedTemplate.min_texts).every(input => input.value.trim());
+                    if (textComplete) stepText.classList.add('complete');
+                }
+                return;
+            }
+            
+            // 显示QQ号步骤
+            if (stepQQ) stepQQ.style.display = 'block';
+            if (stepImage) {
+                stepImage.querySelector('.step-number').textContent = '2';
+                stepImage.querySelector('.step-label').textContent = '图片';
+            }
+            if (stepText) {
+                stepText.querySelector('.step-number').textContent = '3';
+                stepText.querySelector('.step-label').textContent = '文字';
+            }
+            
+            // 更新步骤完成状态
+            const imageComplete = uploadedImages.length >= selectedTemplate.min_images;
+            const textInputs = elements.textInputArea.querySelectorAll('input');
+            const textComplete = Array.from(textInputs).filter((input, idx) => idx < selectedTemplate.min_texts).every(input => input.value.trim());
+            
+            if (imageComplete && stepImage) stepImage.classList.add('complete');
+            if (!imageComplete && stepImage) stepImage.classList.remove('complete');
+            if (textComplete && stepText) stepText.classList.add('complete');
+            if (!textComplete && stepText) stepText.classList.remove('complete');
+        }
+
+        // 搜索过滤
+        function filterTemplates(keyword) {
+            if (!keyword.trim()) return templates;
+            const lower = keyword.toLowerCase();
+            return templates.filter(t => 
+                t.key.toLowerCase().includes(lower) ||
+                t.keywords.some(k => k.toLowerCase().includes(lower))
+            );
+        }
+
+        // 生成表情包
+        async function generateMeme() {
+            if (!selectedTemplate) {
+                showToast('请先选择一个模板', 'error');
+                return;
+            }
+
+            // 收集文字
+            const textInputs = elements.textInputArea.querySelectorAll('input');
+            const texts = Array.from(textInputs)
+                .map(input => input.value.trim())
+                .filter(v => v);
+
+            // 收集图片
+            const images = [];
+            
+            // 添加 QQ 号对应的头像
+            if (selectedTemplate.max_images >= 2 && qqInputs.executor) {
+                images.push({ type: 'qq', qq: qqInputs.executor });
+            }
+            if (qqInputs.target) {
+                images.push({ type: 'qq', qq: qqInputs.target });
+            }
+            
+            // 添加上传的图片
+            uploadedImages.forEach(img => {
+                if (typeof img === 'string') {
+                    images.push({ type: 'base64', data: img });
+                }
+            });
+
+            // 验证图片数量
+            if (images.length < selectedTemplate.min_images) {
+                showToast(`至少需要上传 ${selectedTemplate.min_images} 张图片`, 'error');
+                return;
+            }
+
+            elements.loadingOverlay.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        keyword: selectedTemplate.key,
+                        texts,
+                        images
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || '生成失败');
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                elements.resultImage.src = url;
+                elements.resultModal.classList.remove('hidden');
+                showToast('生成成功！');
+                
+                // 检查图片类型并更新 UI
+                setTimeout(() => updateResultUI(), 100);
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                elements.loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        // 下载图片
+        async function downloadImage() {
+            try {
+                const response = await fetch(elements.resultImage.src);
+                const blob = await response.blob();
+                
+                // 从 Content-Type 头获取 MIME 类型
+                let contentType = response.headers.get('content-type') || blob.type || 'image/png';
+                let ext = 'png';
+                
+                if (contentType.includes('gif')) {
+                    ext = 'gif';
+                } else if (contentType.includes('jpeg')) {
+                    ext = 'jpg';
+                } else if (contentType.includes('webp')) {
+                    ext = 'webp';
+                }
+                
+                // 如果还是检测不到，尝试从数据推断
+                if (ext === 'png') {
+                    const buffer = await blob.arrayBuffer();
+                    const view = new Uint8Array(buffer);
+                    
+                    if (view[0] === 0x47 && view[1] === 0x49 && view[2] === 0x46) {
+                        ext = 'gif';
+                    } else if (view[0] === 0xFF && view[1] === 0xD8) {
+                        ext = 'jpg';
+                    } else if (view[0] === 0x52 && view[1] === 0x49 && view[2] === 0x46 && 
+                               view[8] === 0x57 && view[9] === 0x45 && view[10] === 0x42) {
+                        ext = 'webp';
+                    }
+                }
+                
+                const link = document.createElement('a');
+                link.href = elements.resultImage.src;
+                link.download = `meme_${selectedTemplate.key}_${Date.now()}.${ext}`;
+                link.click();
+                showToast(`已开始下载 (.${ext})`);
+            } catch (error) {
+                showToast('下载失败', 'error');
+            }
+        }
+
+        // 复制图片
+        async function copyImage() {
+            try {
+                const response = await fetch(elements.resultImage.src);
+                const mimeType = response.headers.get('content-type') || 'image/png';
+                
+                // 如果是 GIF，显示详细说明弹窗
+                if (mimeType.includes('gif')) {
+                    alert('⚠️ GIF 动图无法复制\n\n原因：出于安全考虑，浏览器不支持在剪贴板中存储 GIF 动画格式。\n\n解决方案：请使用下载功能将 GIF 保存到本地，然后在相应的应用中使用。');
+                    return;
+                }
+                
+                const blob = await response.blob();
+                
+                // 尝试复制到剪贴板
+                await navigator.clipboard.write([
+                    new ClipboardItem({ [mimeType]: blob })
+                ]);
+                showToast('已复制到剪贴板');
+            } catch (error) {
+                console.error('复制失败:', error);
+                showToast('复制失败，请使用下载功能', 'error');
+            }
+        }
+        
+        // 检查生成的图片类型并更新 UI
+        async function updateResultUI() {
+            try {
+                const response = await fetch(elements.resultImage.src);
+                const mimeType = response.headers.get('content-type') || 'image/png';
+                
+                // 如果是 GIF，复制按钮显示警告
+                if (mimeType.includes('gif')) {
+                    elements.copyBtn.innerHTML = '<i class="fa fa-exclamation-triangle mr-1"></i>无法复制';
+                    elements.copyBtn.style.background = 'linear-gradient(90deg, #ff6b6b, #ff5252)';
+                } else {
+                    elements.copyBtn.innerHTML = '<i class="fa fa-copy mr-1"></i>复制';
+                    elements.copyBtn.style.background = 'linear-gradient(90deg, var(--primary), var(--primary-2))';
+                }
+            } catch (error) {
+                console.error('检查图片类型失败:', error);
+            }
+        }
+
+        // 事件绑定
+        elements.searchInput.addEventListener('input', (e) => {
+            renderTemplates(filterTemplates(e.target.value));
+        });
+
+        elements.generateBtn.addEventListener('click', generateMeme);
+        
+        // 处理下载按钮（多个）
+        elements.downloadBtn.addEventListener('click', downloadImage);
+        if (elements.downloadBtnFooter) {
+            elements.downloadBtnFooter.addEventListener('click', downloadImage);
+        }
+        
+        // 处理复制按钮（多个）
+        elements.copyBtn.addEventListener('click', copyImage);
+        if (elements.copyBtnFooter) {
+            elements.copyBtnFooter.addEventListener('click', copyImage);
+        }
+        
+        // 关闭结果模态框
+        elements.closeResultBtn.addEventListener('click', () => {
+            elements.resultModal.classList.add('hidden');
+        });
+        
+        // 点击模态框背景关闭
+        elements.resultModal.addEventListener('click', (e) => {
+            if (e.target === elements.resultModal) {
+                elements.resultModal.classList.add('hidden');
+            }
+        });
+
+        // 初始化
+        loadTemplates();
+    </script>
+</body>
+</html>
