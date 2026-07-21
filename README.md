@@ -24,3 +24,8 @@ python app.py
 ├── requirements.txt # Python 依赖
 └── .gitignore
 ```
+
+## 更新日志
+
+- **2026-07-21** — 资源检查改为同步 `check_resources()`，避免模板资源缺失
+- **初始版本** — 功能完整的前后端，300 模板
