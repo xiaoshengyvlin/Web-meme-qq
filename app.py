@@ -20,7 +20,7 @@ from meme_generator import (
     get_memes,
 )
 from meme_generator import Image as MemeImage
-from meme_generator.resources import check_resources_in_background
+from meme_generator.resources import check_resources
 
 # 配置日志
 logging.basicConfig(
@@ -43,7 +43,9 @@ def load_templates():
     """加载所有表情包模板"""
     global _template_map, _template_list
     try:
-        check_resources_in_background()
+        logger.info("正在检查模板资源（首次启动可能需要几分钟）...")
+        check_resources()
+        logger.info("模板资源检查完成")
         memes = get_memes()
         _template_map.clear()
         _template_list.clear()
